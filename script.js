@@ -1,0 +1,35 @@
+const products=[
+{id:1,name:'Classic Hoodie',category:'fashion',price:1299,emoji:'🧥',desc:'Comfortable everyday hoodie with a clean modern look.'},
+{id:2,name:'Smart Watch',category:'electronics',price:2499,emoji:'⌚',desc:'A stylish smartwatch concept for everyday activity tracking.'},
+{id:3,name:'Wireless Headphones',category:'electronics',price:1799,emoji:'🎧',desc:'Comfortable wireless headphones for music and calls.'},
+{id:4,name:'Desk Lamp',category:'home',price:899,emoji:'💡',desc:'Minimal desk lamp for study and work spaces.'},
+{id:5,name:'Ceramic Mug',category:'home',price:499,emoji:'☕',desc:'Simple ceramic mug for your daily coffee or tea.'},
+{id:6,name:'Sunglasses',category:'fashion',price:799,emoji:'🕶️',desc:'Classic sunglasses with a lightweight everyday frame.'},
+{id:7,name:'Face Care Kit',category:'beauty',price:999,emoji:'🧴',desc:'A simple personal-care kit for everyday use.'},
+{id:8,name:'Backpack',category:'fashion',price:1199,emoji:'🎒',desc:'Practical backpack for college, work and travel.'},
+{id:9,name:'Bluetooth Speaker',category:'electronics',price:1399,emoji:'🔊',desc:'Compact speaker for casual music listening.'},
+{id:10,name:'Plant Pot',category:'home',price:399,emoji:'🪴',desc:'Decorative pot for adding greenery to your room.'},
+{id:11,name:'Lip Balm Set',category:'beauty',price:349,emoji:'💄',desc:'Compact lip-care set for everyday use.'},
+{id:12,name:'Sneakers',category:'fashion',price:1899,emoji:'👟',desc:'Casual sneakers designed for everyday comfort.'}
+];
+let cart=JSON.parse(localStorage.getItem('shopEaseCart')||'[]');
+let wishlist=JSON.parse(localStorage.getItem('shopEaseWishlist')||'[]');
+let currentCategory='all';
+const $=id=>document.getElementById(id);
+const money=n=>'₹'+n.toLocaleString('en-IN');
+function save(){localStorage.setItem('shopEaseCart',JSON.stringify(cart));localStorage.setItem('shopEaseWishlist',JSON.stringify(wishlist));}
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),1800)}
+function renderProducts(){let list=products.filter(p=>currentCategory==='all'||p.category===currentCategory);const q=$('searchInput').value.trim().toLowerCase();if(q)list=list.filter(p=>(p.name+' '+p.category+' '+p.desc).toLowerCase().includes(q));const sort=$('sortSelect').value;if(sort==='low')list.sort((a,b)=>a.price-b.price);if(sort==='high')list.sort((a,b)=>b.price-a.price);if(sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name));$('resultCount').textContent=`${list.length} product${list.length!==1?'s':''}`;$('emptyProducts').classList.toggle('hidden',list.length!==0);$('productGrid').innerHTML=list.map(p=>{const liked=wishlist.includes(p.id);return `<article class="product-card"><button class="wish ${liked?'active':''}" onclick="toggleWish(${p.id})">${liked?'♥':'♡'}</button><div class="product-image">${p.emoji}</div><div class="product-info"><small>${p.category}</small><h3>${p.name}</h3><div class="price">${money(p.price)}</div><div class="card-actions"><button onclick="showDetails(${p.id})">Details</button><button class="add" onclick="addToCart(${p.id})">Add to Cart</button></div></div></article>`}).join('')}
+function addToCart(id){const item=cart.find(x=>x.id===id);if(item)item.qty++;else cart.push({id,qty:1});save();updateCounts();toast('Added to cart');}
+function changeQty(id,delta){const item=cart.find(x=>x.id===id);if(!item)return;item.qty+=delta;if(item.qty<=0)cart=cart.filter(x=>x.id!==id);save();renderCart();updateCounts();}
+function removeFromCart(id){cart=cart.filter(x=>x.id!==id);save();renderCart();updateCounts();toast('Item removed');}
+function renderCart(){const box=$('cartItems');if(!cart.length){box.innerHTML='<div class="empty">Your cart is empty.</div>';$('cartTotal').textContent='₹0';return}box.innerHTML=cart.map(i=>{const p=products.find(x=>x.id===i.id);return `<div class="cart-row"><div class="cart-thumb">${p.emoji}</div><div><strong>${p.name}</strong><div>${money(p.price)} × ${i.qty}</div><div class="qty"><button onclick="changeQty(${p.id},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${p.id},1)">+</button></div></div><button class="remove" onclick="removeFromCart(${p.id})">Remove</button></div>`}).join('');$('cartTotal').textContent=money(cart.reduce((s,i)=>s+products.find(p=>p.id===i.id).price*i.qty,0));}
+function updateCounts(){$('cartCount').textContent=cart.reduce((s,i)=>s+i.qty,0);$('wishlistCount').textContent=wishlist.length}
+function toggleWish(id){wishlist=wishlist.includes(id)?wishlist.filter(x=>x!==id):[...wishlist,id];save();updateCounts();renderProducts();toast(wishlist.includes(id)?'Added to wishlist':'Removed from wishlist')}
+function showDetails(id){const p=products.find(x=>x.id===id);$('productDetails').innerHTML=`<div class="detail"><div class="detail-image">${p.emoji}</div><div><small>${p.category}</small><h2>${p.name}</h2><div class="price">${money(p.price)}</div><p>${p.desc}</p><button class="primary-btn" onclick="addToCart(${p.id});closeModal('productModal')">Add to Cart</button></div></div>`;$('productModal').classList.remove('hidden')}
+function renderWishlist(){const box=$('wishlistItems');const items=products.filter(p=>wishlist.includes(p.id));box.innerHTML=items.length?items.map(p=>`<div class="cart-row"><div class="cart-thumb">${p.emoji}</div><div><strong>${p.name}</strong><div>${money(p.price)}</div></div><button class="remove" onclick="toggleWish(${p.id});renderWishlist()">Remove</button></div>`).join(''):'<div class="empty">Your wishlist is empty.</div>'}
+function closeModal(id){$(id).classList.add('hidden')}
+$('searchInput').addEventListener('input',renderProducts);$('categoryFilter').addEventListener('change',e=>{currentCategory=e.target.value;document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active',c.dataset.category===currentCategory));renderProducts()});$('sortSelect').addEventListener('change',renderProducts);
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{currentCategory=c.dataset.category;$('categoryFilter').value=currentCategory;document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');renderProducts()}));
+$('cartBtn').onclick=()=>{$('cartModal').classList.remove('hidden');renderCart()};$('wishlistBtn').onclick=()=>{$('wishlistModal').classList.remove('hidden');renderWishlist()};$('checkoutBtn').onclick=()=>{if(!cart.length){toast('Your cart is empty');return}closeModal('cartModal');$('checkoutModal').classList.remove('hidden')};$('checkoutForm').addEventListener('submit',e=>{e.preventDefault();cart=[];save();updateCounts();closeModal('checkoutModal');e.target.reset();toast('Order placed successfully!')});document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.close)));document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.add('hidden')}));
+renderProducts();updateCounts();
